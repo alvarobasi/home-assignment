@@ -25,6 +25,20 @@ def map_fn(path, label):
     return image, label
 
 
+def decode_image(path):
+    """
+    Function decoding from an image path to an RGB 0-255 image.
+
+    :param path: Path string pointing to an image location.
+    :returns image, label: Returns the decoded image and its label.
+    """
+    image = tf.io.read_file(path)
+    image = tf.image.decode_jpeg(image, channels=3)
+    image = tf.image.resize(image, size=[600, 600])
+
+    return image
+
+
 def print_available_devices():
     """ Prints the available hardware devices. """
     local_device_protos = [(x.name, x.device_type, x.physical_device_desc) for x in device_lib.list_local_devices()]
@@ -60,9 +74,6 @@ def evaluate_model(ds, model, show_images=False):
     :param model: tf.keras.Model object with the model to be tested.
     :param show_images: Enables the posibility to print the images being tested. For debugging purposes.
     """
-    results = model.evaluate(ds)
-    print("Test loss, Test acc:", results)
-
     ds_iterator = iter(ds)
     image_batch, label_batch = next(ds_iterator)
     error_counter = 0
@@ -71,7 +82,6 @@ def evaluate_model(ds, model, show_images=False):
     while True:
         # Predicts the labels of the dataset batch.
         predictions = model.predict(image_batch)
-        # predictions = tf.nn.sigmoid(predictions)
         image_counter += len(image_batch.numpy())
 
         # Shows the labels/predicted labels toghether for debugging purposes.

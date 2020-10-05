@@ -1,32 +1,46 @@
 import argparse
-import tensorflow as tf
-from utils import get_image_label_pairs, get_dataset_objects, test_model
+import numpy as np
+import matplotlib.pyplot as plt
 from Network import DetectionModel
 from config import *
+from utils import decode_image
+
+
+def has_tomatoes(image, model):
+    """
+    Returns a boolean stating whether or not there are tomatoes present in the image.
+
+    :param image: Matrix containing the image data.
+    :param model: tf.keras.Model object containing the loaded model.
+
+    :returns: Returns a boolean stating whether or not there are tomatoes present in the image.
+    """
+    result = model.predict(np.expand_dims(image, axis=0))
+
+    plt.imshow(image.numpy().astype(np.uint8))
+    plt.axis('off')
+    plt.title("Tomatoes found!" if bool(np.round(np.squeeze(result))) else "No tomatoes found!")
+    plt.show()
+
+    return bool(np.round(np.squeeze(result)))
+
 
 if __name__ == '__main__':
     # Construct the argument parser and parse the hyperparameters.
     ap = argparse.ArgumentParser()
-    ap.add_argument("-d", "--dataset", default=DATASET_PATH,
-                    help="Path to the dataset directory.")
-    ap.add_argument("-l", "--labels", default=LABELS_PATH + "img_annotations.json",
-                    help="Path to the img_annotations.json file.")
-    ap.add_argument("-bs", "--batch_size", type=int, default=BATCH_SIZE,
-                    help="Size of the mini-batch to be used in the training process.")
-    ap.add_argument("-fp16", "--mixed_precision", type=bool, default=MIXED_PRECISION,
-                    help="Enables mixed_precision training. Only available for Volta, Turing and Ampere GPUs.")
+    ap.add_argument("-i", "--img_path", type=str, help="Path to the test image.",
+                    default=DATASET_PATH + "4dda082e4a1d820f7cc32f5cd9dc79be.jpeg")
+    ap.add_argument("-w", "--model_weights", default=CHECKPOINTS_PATH + "saved_model/saved_model",
+                    help="Path to model checkpoint to be loaded.")
+
     args = vars(ap.parse_args())
 
-    # Enabling AMP (Automatic Mixed Precision).
-    if args["mixed_precision"]:
-        tf.keras.mixed_precision.experimental.set_policy('mixed_float16')
+    model = DetectionModel(input_shape=IMAGE_SHAPE).get_model()
 
-    model = DetectionModel((600, 600, 3)).get_model()
-    model.load_weights("outputs/detector_weights_resnet_1e-3_20epochs_bs32_0.075error.h5")
+    model.load_weights(args["model_weights"])
 
-    X, Y = get_image_label_pairs(args["labels"], args["dataset"])
+    image = decode_image(args["img_path"])
 
-    img_shape = (600, 600, 3)
+    found = has_tomatoes(image, model)
 
-    train_ds, training_steps, val_ds, _, test_ds = get_dataset_objects(X, Y, args["batch_size"], test_split=0.2)
-    test_model(test_ds, model, show_images=False)
+    print(found)

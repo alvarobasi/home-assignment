@@ -1,6 +1,7 @@
 """
 Within this file some parameters can be tuned.
 """
+
 # Paths
 PLOTS_PATH = "outputs/plots/"
 DATASET_PATH = "datasets/images/"

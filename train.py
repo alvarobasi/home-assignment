@@ -2,26 +2,9 @@ import tensorflow as tf
 from utils import get_image_label_pairs, get_dataset_objects, test_dataset, evaluate_model, plot_training_results
 import argparse
 from Network import DetectionModel
-from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
-from tensorflow.keras import backend as K
+from tensorflow.python.keras.callbacks import ModelCheckpoint
+
 from config import *
-
-
-def weighted_binary_crossentropy(y_true, y_pred, weight_negative=.6, weight_positive=3.):
-    """
-    Evaluates the model using the given dataset and prints the result.
-
-    :param y_true: True labels. Mandatory for .fit() method.
-    :param y_pred: Predicted labels. Mandatory for .fit() method.
-    :param weight_negative: Factor to be applied to the negative outputs. Used for unbalanced datasets.
-    :param weight_positive: Factor to be applied to the positive outputs. Used for unbalanced datasets.
-
-    :returns: The weighted binary cross-entropy loss value.
-    """
-    y_true = K.clip(y_true, K.epsilon(), 1 - K.epsilon())
-    y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
-    logloss = -(y_true * K.log(y_pred) * weight_positive + (1 - y_true) * K.log(1 - y_pred)) * weight_negative
-    return K.mean(logloss, axis=-1)
 
 
 def train(train_dataset, val_dataset, model, learning_rate, epochs, callback_list, weights):
@@ -97,7 +80,7 @@ if __name__ == '__main__':
     model_object = DetectionModel(input_shape=IMAGE_SHAPE)
     model = model_object.get_model()
 
-    # Testing dataset in one single mini-batch.
+    # Allows to watch the dataset in one single mini-batch.
     # test_dataset(test_ds, model_object.get_data_augmentation_layers())
 
     # Showing the summary of the model in order to check trainable params.
@@ -123,9 +106,9 @@ if __name__ == '__main__':
 
     # Fine-tune the last upper layers.
     layers_to_fine_tune = args["fine_tune_layers"]
-
     model_object.set_fine_tune_layers(layers_to_fine_tune)
 
+    # Retreive the new model.
     model = model_object.get_model()
 
     model.summary()
@@ -137,5 +120,3 @@ if __name__ == '__main__':
     plot_training_results(history, PLOTS_PATH + "fine_tuning_plot.png")
 
     evaluate_model(test_ds, model, show_images=False)
-
-    # model.save_weights(CHECKPOINTS_PATH + "model_weights.h5", overwrite=True)

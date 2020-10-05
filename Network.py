@@ -73,7 +73,7 @@ class DetectionModel(object):
         """ Sets to trainable the last «last_layers» of the base model for fine tuning. """
         self.__base_model.trainable = True
 
-        # Returns how many layers are in the base model
+        # Sets to false all the layers but the «last_layers» of the base model.
         if len(self.__base_model.layers) > last_layers:
             for layer in self.__base_model.layers[:-last_layers]:
                 layer.trainable = False

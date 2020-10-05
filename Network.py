@@ -2,24 +2,46 @@ import tensorflow as tf
 
 
 class DetectionModel(object):
+    """
+    The DetectionModel object creates and stores the model architecture. It also stores the base model of the
+    TL (Transfer Learning)task separately in order to be able to unfreeze some of its layers used for the fine
+    tuning stage.
+
+    :param input_shape: tuple with the shape of the model input.
+
+    Attributes:
+        __input_shape: Stores the shape of the model input layer.
+        __base_model: Stores the base model separately from the entire detection model.
+        __model: Stores the full detection model.
+    """
 
     def __init__(self, input_shape=None):
         self.__input_shape = input_shape
+
+        # Base model creation. The top classification layers are removed to introduce ours for our specific task.
         self.__base_model = tf.keras.applications.ResNet50V2(weights="imagenet",
                                                              input_shape=self.__input_shape,
                                                              include_top=False,
                                                              )
+        # Building and storing the complete model.
         self.__model = self.__build()
 
     def __build(self):
+        """
+        Builds the detection model.
+
+        :returns model: A keras.Model model architecture.
+        """
+
         # Freeze all the base model weights.
         self.__base_model.trainable = False
 
+        # Sets the graph of the initial layers: Input, data_augmentation layer and base model preprocessing layer.
         inputs = tf.keras.layers.Input(shape=self.__input_shape)
-        x = self.get_data_augmentation_layer()(inputs)
-        x = tf.keras.applications.resnet_v2.preprocess_input(inputs)
+        x = self.get_data_augmentation_layers()(inputs)
+        x = tf.keras.applications.resnet_v2.preprocess_input(x)
 
-        # # New classification upper layers added.
+        # New classification upper layers added. AP2D -> FLATTEN -> DENSE (256) -> RELU -> DROPOUT -> DENSE (1) -> SIGM
         # x = self.__base_model(x, training=False)
         # x = tf.keras.layers.AveragePooling2D(pool_size=(4, 4))(x)
         # x = tf.keras.layers.Flatten()(x)
@@ -27,10 +49,10 @@ class DetectionModel(object):
         # x = tf.keras.layers.Dropout(0.5)(x)
         # outputs = tf.keras.layers.Dense(1, activation="sigmoid")(x)
 
-        # New classification upper layers added.
+        # New classification upper layers added. GAP -> DROPOUT -> DENSE (1) -> SIGM
         x = self.__base_model(x, training=False)
         x = tf.keras.layers.GlobalAveragePooling2D()(x)
-        x = tf.keras.layers.Dropout(0.5)(x)
+        x = tf.keras.layers.Dropout(0.25)(x)
         outputs = tf.keras.layers.Dense(1, activation='sigmoid')(x)
 
         model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
@@ -38,19 +60,24 @@ class DetectionModel(object):
         return model
 
     def set_fine_tune_layers(self, last_layers):
+        """ Sets to trainable the last «last_layers» of the base model for fine tuning. """
         self.__base_model.trainable = True
 
         for layer in self.__base_model.layers[:-last_layers]:
             layer.trainable = False
 
     def get_base_model(self):
+        """ Returns the base model used for the TL task. """
         return self.__base_model
 
     def get_model(self):
+        """ Returns the entire detection model. """
         return self.__model
 
     @staticmethod
-    def get_data_augmentation_layer():
+    def get_data_augmentation_layers():
+        """ Returns a Sequence of data augmentation layers. Random horizontal flip and randomm rotation. """
+
         return tf.keras.Sequential([tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal"),
                                     tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
                                     ])

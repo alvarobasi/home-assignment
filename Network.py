@@ -28,6 +28,7 @@ class DetectionModel(object):
         self.__data_augmentation = tf.keras.Sequential(
             [
                 tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal"),
+                tf.keras.layers.experimental.preprocessing.RandomFlip("vertical"),
                 tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
             ]
         )
@@ -72,8 +73,10 @@ class DetectionModel(object):
         """ Sets to trainable the last «last_layers» of the base model for fine tuning. """
         self.__base_model.trainable = True
 
-        for layer in self.__base_model.layers[:-last_layers]:
-            layer.trainable = False
+        # Returns how many layers are in the base model
+        if len(self.__base_model.layers) > last_layers:
+            for layer in self.__base_model.layers[:-last_layers]:
+                layer.trainable = False
 
     def get_base_model(self):
         """ Returns the base model used for the TL task. """

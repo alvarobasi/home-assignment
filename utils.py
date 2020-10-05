@@ -4,8 +4,8 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
-
-# from sklearn.utils.class_weight import compute_class_weight
+from config import *
+from sklearn.utils.class_weight import compute_class_weight
 
 
 @tf.function
@@ -52,14 +52,17 @@ def test_dataset(ds, data_augmentation=None):
         plt.axis('off')
 
 
-def test_model(ds, model, show_images=False):
+def evaluate_model(ds, model, show_images=False):
     """
-    Tests the given model using the given dataset and prints the classification error (# errors/total_images).
+    Evaluates the given model using the given dataset and prints the classification error (# errors/total_images).
 
     :param ds: tf.Dataset object used for testing the model.
     :param model: tf.keras.Model object with the model to be tested.
     :param show_images: Enables the posibility to print the images being tested. For debugging purposes.
     """
+    results = model.evaluate(ds)
+    print("Test loss, Test acc:", results)
+
     ds_iterator = iter(ds)
     image_batch, label_batch = next(ds_iterator)
     error_counter = 0
@@ -72,10 +75,10 @@ def test_model(ds, model, show_images=False):
         image_counter += len(image_batch.numpy())
 
         # Shows the labels/predicted labels toghether for debugging purposes.
-        print("Labels:")
-        print(label_batch.numpy())
-        print("Predicted:")
-        print(np.round(np.squeeze(predictions)))
+        # print("Labels:")
+        # print(label_batch.numpy())
+        # print("Predicted:")
+        # print(np.round(np.squeeze(predictions)))
 
         # Plots the images along with their true/predicted labels. For debugging purposes.
         if show_images:
@@ -97,12 +100,12 @@ def test_model(ds, model, show_images=False):
         try:
             image_batch, label_batch = next(ds_iterator)
         except StopIteration:
-            print("Foodvisor error rate on " + str(image_counter) + " images tested: "
+            print("Error rate on " + str(image_counter) + " images tested: "
                   + str(error_counter / image_counter))
             break
 
 
-def get_dataset_objects(x, y, batch_size, valid_split=0.2, test_split=0.1):
+def get_dataset_objects(x, y, batch_size, valid_split=0.2, test_split=0.05):
     """
     Slipts dataset intro train, validation and set, shuffles the data and returns the tf.Dataset objects corresponding
     to each of the dataset splits.
@@ -121,6 +124,11 @@ def get_dataset_objects(x, y, batch_size, valid_split=0.2, test_split=0.1):
     """
     x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=valid_split, random_state=1805)
     x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=test_split, random_state=1805)
+
+    z_test = np.column_stack((x_test, y_test))
+
+    # Let's save the test set for future evaluation.
+    np.save(TEST_SET_FILE_PATH, z_test)
 
     training_steps = int(len(x_train) // batch_size)
     validation_steps = int(len(x_val) // batch_size)
@@ -177,13 +185,14 @@ def plot_training_results(hist, path):
     plt.savefig(path)
 
 
-def get_image_label_pairs(annotations_path, image_dir_path):
+def get_image_label_pairs(annotations_path, image_dir_path, balanced=True):
     """
     Taking the img_annotations.json file, it extracts all the images paths along with their labels and builds two new
     arrays containing the full image paths along with their label, which is converted to 0 (no tomatoes present)
     or 1 (tomatoes present). In order to achieve that, a tomato_label_list has been cosntructed by hand-selecting the
     labels corresponding to tomatoes from the label_mapping.csv file.
 
+    :param balanced: Wether or not the resulting dataset should be balanced. That is, enable oversampling.
     :param annotations_path: Path to the img_annotations.json file containing the labels of every image.
     :param image_dir_path: List containing all the images paths.
     """
@@ -191,6 +200,8 @@ def get_image_label_pairs(annotations_path, image_dir_path):
     # Opening the img_annotations.json file.
     f = open(annotations_path, "r")
     labels = f.read()
+
+    # List of tomato labels extracted from the label_mapping.csv
     tomato_label_list = [
         "939030726152341c154ba28629341da6_lab",
         "9f2c42629209f86b2d5fbe152eb54803_lab",
@@ -203,34 +214,46 @@ def get_image_label_pairs(annotations_path, image_dir_path):
     # Load the json string to a dict().
     labels_dic = json.loads(labels)
 
-    x = []
-    y = []
-    # Compares all the boxes labels from every image with the tomato_label_list. y stores a new label 0 or 1, depending
-    # of whether there is a tomatoe label present or not.
+    x_negatives = []
+    y_negatives = []
+    x_positives = []
+    y_positives = []
+
+    class_weights = None
+
+    # Compares all the boxes labels from every image with the tomato_label_list and stores a new label 0 or 1, depending
+    # on whether there is a tomato label present or not.
     for image_path, boxes in labels_dic.items():
-        x.append(image_dir_path + image_path)
-        found_tomatoes = 0
+        found_tomatoes = 0.
         for box in boxes:
             if box["id"] in tomato_label_list:
-                found_tomatoes = 1
+                found_tomatoes = 1.
+                x_positives.append(image_dir_path + image_path)
+                y_positives.append(found_tomatoes)
                 break
-        y.append(found_tomatoes)
+        if found_tomatoes == 0:
+            x_negatives.append(image_dir_path + image_path)
+            y_negatives.append(found_tomatoes)
 
-    # Undersampling the negatives set in order to balance the datasets with the positives.
+    # Oversampling is applied over the positive set in order to balance the datasets.
     # 2500(other)/500(tomato) = 5 >> 1.5
+    if balanced:
 
-    # result = compute_class_weight('balanced', np.unique(y_train), y_train)
-    positives = sum(y)
+        ratio = len(x_positives + x_negatives) // len(x_positives)
+        z = (x_positives, y_positives)
 
-    # Sets a mask of indexes selected randomly to be used for the new balanced dataset.
-    mask = np.hstack([np.random.choice(np.where(y == l)[0], positives, replace=False)
-                      for l in np.unique(y)])
+        z = z * (ratio - 1)
 
-    x_np = np.array(x)
-    y_np = np.array(y).astype(np.float32)
+        x_positives = x_positives * (ratio - 1)
+        y_positives = y_positives * (ratio - 1)
 
-    # Apply the mask to the x and y arrays.
-    x = x_np[mask]
-    y = y_np[mask]
+        x = x_negatives + x_positives
+        y = y_negatives + y_positives
 
-    return x, y
+    else:
+        x = x_positives + x_negatives
+        y = y_positives + y_negatives
+
+        class_weights = compute_class_weight('balanced', np.unique(y), y)
+
+    return np.array(x), np.array(y), class_weights

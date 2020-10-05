@@ -25,8 +25,11 @@ def has_tomatoes(image, model):
 if __name__ == '__main__':
     # Construct the argument parser and parse the hyperparameters.
     ap = argparse.ArgumentParser()
-    ap.add_argument("-i", "--input_image", required=True, help="Path to a test image.")
-    ap.add_argument("-w", "--checkpoint_path", required=True, help="Path to the model checkpoint to be loaded.")
+    ap.add_argument("--train", action="store_true", help="Path to a test image.")
+    ap.add_argument("--test", action="store_true", help="Path to the model checkpoint to be loaded.")
+    ap.add_argument("--eval", action="store_true", required=True, help="Path to the model checkpoint to be loaded.")
+    ap.add_argument("--img_path", type=str, required=True, help="Path to the test image.")
+
 
     args = vars(ap.parse_args())
 

@@ -1,20 +1,19 @@
 import argparse
 import tensorflow as tf
-
 from utils import get_image_label_pairs, get_dataset_objects, test_model
 from Network import DetectionModel
-
+from config import *
 
 if __name__ == '__main__':
     # Construct the argument parser and parse the hyperparameters.
     ap = argparse.ArgumentParser()
-    ap.add_argument("-d", "--dataset", default="datasets/images/",
+    ap.add_argument("-d", "--dataset", default=DATASET_PATH,
                     help="Path to the dataset directory.")
-    ap.add_argument("-l", "--labels", default="img_annotations.json",
+    ap.add_argument("-l", "--labels", default=LABELS_PATH + "img_annotations.json",
                     help="Path to the img_annotations.json file.")
-    ap.add_argument("-bs", "--batch_size", type=int, default=16,
+    ap.add_argument("-bs", "--batch_size", type=int, default=BATCH_SIZE,
                     help="Size of the mini-batch to be used in the training process.")
-    ap.add_argument("-fp16", "--mixed_precision", type=bool, default=True,
+    ap.add_argument("-fp16", "--mixed_precision", type=bool, default=MIXED_PRECISION,
                     help="Enables mixed_precision training. Only available for Volta, Turing and Ampere GPUs.")
     args = vars(ap.parse_args())
 

@@ -1,12 +1,13 @@
 import tensorflow as tf
-from utils import get_image_label_pairs, get_dataset_objects, test_dataset, test_model, plot_training_results
+from utils import get_image_label_pairs, get_dataset_objects, test_dataset, evaluate_model, plot_training_results
 import argparse
 from Network import DetectionModel
 from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras import backend as K
+from config import *
 
 
-def weighted_binary_crossentropy(y_true, y_pred, weight_negative=1., weight_positive=1.):
+def weighted_binary_crossentropy(y_true, y_pred, weight_negative=.6, weight_positive=3.):
     """
     Evaluates the model using the given dataset and prints the result.
 
@@ -23,10 +24,11 @@ def weighted_binary_crossentropy(y_true, y_pred, weight_negative=1., weight_posi
     return K.mean(logloss, axis=-1)
 
 
-def train(train_dataset, val_dataset, model, learning_rate, epochs, callback_list):
+def train(train_dataset, val_dataset, model, learning_rate, epochs, callback_list, weights):
     """
     Trains the model using the given dataset and returns the metrics historical for plotting.
 
+    :param weights: If set, adds a weight to each class during training.
     :param train_dataset: tf.Dataset object used for training the model.
     :param val_dataset: tf.Dataset object used for evaluation.
     :param model: tf.keras.Model object with the model to be trained.
@@ -41,21 +43,15 @@ def train(train_dataset, val_dataset, model, learning_rate, epochs, callback_lis
     model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(),
                   metrics=["accuracy"])
 
-    h = model.fit(train_dataset, epochs=epochs, steps_per_epoch=training_steps,
-                  validation_data=val_dataset, callbacks=callback_list)
+    if weights is not None:
+        h = model.fit(train_dataset, epochs=epochs, steps_per_epoch=training_steps,
+                      validation_data=val_dataset, callbacks=callback_list,
+                      class_weight={0: weights[0], 1: weights[1]})
+    else:
+        h = model.fit(train_dataset, epochs=epochs, steps_per_epoch=training_steps,
+                      validation_data=val_dataset, callbacks=callback_list)
 
     return h
-
-
-def evaluate(test_dataset, model):
-    """
-    Evaluates the model using the given dataset and prints the result.
-
-    :param test_dataset: tf.Dataset object to be evaluated.
-    :param model: tf.keras.Model object with the model to be evaluated.
-    """
-    results = model.evaluate(test_dataset)
-    print("test loss, test acc:", results)
 
 
 if __name__ == '__main__':
@@ -66,19 +62,18 @@ if __name__ == '__main__':
                     help="Path to the dataset directory.")
     ap.add_argument("-a", "--annotations_file", required=True,
                     help="Path to the img_annotations.json file.")
-    ap.add_argument("-e", "--epochs", type=int, default=5,
-                    help="# of epochs to train the network for")
-    ap.add_argument("-p", "--plot", default="outputs/plots/",
-                    help="path to output loss/accuracy plot")
-    ap.add_argument("-bs", "--batch_size", type=int, default=32,
+    ap.add_argument("-e", "--epochs", type=int, default=EPOCHS,
+                    help="# of epochs to initially train the network for. Fine tuning will be 3 times the selected"
+                         "batch size")
+    ap.add_argument("-bs", "--batch_size", type=int, default=BATCH_SIZE,
                     help="Size of the mini-batch to be used in the training process.")
-    ap.add_argument("-lr", "--learning_rate", type=float, default=0.001,
+    ap.add_argument("-lr", "--learning_rate", type=float, default=LEARNING_RATE,
                     help="Set learning rate value.")
-    ap.add_argument("-ft", "--fine_tune_layers", type=int, default=40,
+    ap.add_argument("-ftl", "--fine_tune_layers", type=int, default=FINE_TUNE_LAYERS,
                     help="# of last layers to fine tune.")
-    ap.add_argument("-fp16", "--mixed_precision", type=bool, default=False,
+    ap.add_argument("-fp16", "--mixed_precision", type=bool, default=MIXED_PRECISION,
                     help="Enables mixed_precision training. Only available for Volta, Turing and Ampere GPUs.")
-    ap.add_argument("-xla", "--xla_compilation", type=bool, default=False,
+    ap.add_argument("-xla", "--xla_compilation", type=bool, default=XLA,
                     help="Enables XLA compilation mode in order to accelerate training. Linux only.")
     args = vars(ap.parse_args())
 
@@ -86,22 +81,20 @@ if __name__ == '__main__':
     tf.keras.backend.clear_session()
 
     # Enable XLA runtime execution in order to accelerate training in Linux systems.
-    if args["xla_compilation"]:
-        tf.config.optimizer.set_jit(False)
+    tf.config.optimizer.set_jit(args["xla_compilation"])
 
     # Enable AMP (Automatic Mixed Precision).
     if args["mixed_precision"]:
         tf.keras.mixed_precision.experimental.set_policy('mixed_float16')
 
     # Retreive the full dataset paths along with their labels.
-    X, Y = get_image_label_pairs(args["annotations_file"], args["dataset_path"])
-
-    img_shape = (600, 600, 3)
+    X, Y, class_weights = get_image_label_pairs(args["annotations_file"], args["dataset_path"],
+                                                balanced=BALANCED_DATASET)
 
     train_ds, training_steps, val_ds, _, test_ds = get_dataset_objects(X, Y, args["batch_size"])
 
     # Model creation using transfer learning from a pre-trained ResNet50V2.
-    model_object = DetectionModel(input_shape=img_shape)
+    model_object = DetectionModel(input_shape=IMAGE_SHAPE)
     model = model_object.get_model()
 
     # Testing dataset in one single mini-batch.
@@ -112,7 +105,7 @@ if __name__ == '__main__':
 
     # Checkpoint
     best_checkpoint = ModelCheckpoint(
-        filepath='outputs/checkpoints/model.h5',
+        filepath=CHECKPOINTS_PATH + "saved_model",
         monitor='accuracy',
         save_weights_only=True,
         save_best_only=True,
@@ -120,20 +113,13 @@ if __name__ == '__main__':
         verbose=1,
         mode='auto')
 
-    # early_stop = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=2, verbose=1, mode='max')
-
     callbacks = [best_checkpoint]
 
-    history = train(train_ds, val_ds, model, args["learning_rate"], args["epochs"], callbacks)
+    history = train(train_ds, val_ds, model, args["learning_rate"], args["epochs"], callbacks, class_weights)
 
-    plot_training_results(history, args["plot"] + "pre_fine_tuning_plot.png")
+    plot_training_results(history, PLOTS_PATH + "pre_fine_tuning_plot.png")
 
-    test_model(test_ds, model, show_images=False)
-
-    model.save_weights("outputs/detector_weights.h5", overwrite=True)
-
-    # Returns how many layers are in the base model
-    print("Number of layers in the base model: ", len(model_object.get_base_model().layers))
+    evaluate_model(test_ds, model, show_images=False)
 
     # Fine-tune the last upper layers.
     layers_to_fine_tune = args["fine_tune_layers"]
@@ -141,14 +127,15 @@ if __name__ == '__main__':
     model_object.set_fine_tune_layers(layers_to_fine_tune)
 
     model = model_object.get_model()
+
     model.summary()
 
     # Train the model again in order to fine tune the last layers. We use a lower learning rate and double epochs, as
-    # this session will be de most important one for the model performance.
-    history = train(train_ds, val_ds, model, args["learning_rate"] / 100, args["epochs"] * 2, callbacks)
+    # this session will be the most important one for the model performance.
+    history = train(train_ds, val_ds, model, FINE_TUNING_LR, args["epochs"] * 3, callbacks, class_weights)
 
-    plot_training_results(history, args["plot"] + "fine_tuning_plot.png")
+    plot_training_results(history, PLOTS_PATH + "fine_tuning_plot.png")
 
-    test_model(test_ds, model, show_images=False)
+    evaluate_model(test_ds, model, show_images=False)
 
-    model.save_weights("outputs/detector_fine_tuned_weights.h5", overwrite=True)
+    # model.save_weights(CHECKPOINTS_PATH + "model_weights.h5", overwrite=True)

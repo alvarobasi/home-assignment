@@ -1,4 +1,4 @@
 .idea
-outputs
 venv
 datasets
+/outputs/checkpoints/

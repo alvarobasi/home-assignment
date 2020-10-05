@@ -105,17 +105,19 @@ if __name__ == '__main__':
     model = model_object.get_model()
 
     # Testing dataset in one single mini-batch.
-    test_dataset(test_ds, model_object.get_data_augmentation_layers())
+    # test_dataset(test_ds, model_object.get_data_augmentation_layers())
 
+    # Showing the summary of the model in order to check trainable params.
     model.summary()
 
+    # Checkpoint
     best_checkpoint = ModelCheckpoint(
-        filepath='outputs/saved_model/detector_weights',
+        filepath='outputs/checkpoints/model.h5',
         monitor='accuracy',
-        save_weights_only=False,
+        save_weights_only=True,
         save_best_only=True,
         save_freq=training_steps * 5,
-        verbose=2,
+        verbose=1,
         mode='auto')
 
     # early_stop = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=2, verbose=1, mode='max')
@@ -134,14 +136,15 @@ if __name__ == '__main__':
     print("Number of layers in the base model: ", len(model_object.get_base_model().layers))
 
     # Fine-tune the last upper layers.
-    layers_to_fine_tune = 30
+    layers_to_fine_tune = args["fine_tune_layers"]
 
     model_object.set_fine_tune_layers(layers_to_fine_tune)
 
     model = model_object.get_model()
     model.summary()
 
-    # Train the model again in order to fine tune the last layers.
+    # Train the model again in order to fine tune the last layers. We use a lower learning rate and double epochs, as
+    # this session will be de most important one for the model performance.
     history = train(train_ds, val_ds, model, args["learning_rate"] / 100, args["epochs"] * 2, callbacks)
 
     plot_training_results(history, args["plot"] + "fine_tuning_plot.png")

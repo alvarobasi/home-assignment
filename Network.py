@@ -23,6 +23,15 @@ class DetectionModel(object):
                                                              input_shape=self.__input_shape,
                                                              include_top=False,
                                                              )
+
+        # Build data_augmentation layers.
+        self.__data_augmentation = tf.keras.Sequential(
+            [
+                tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal"),
+                tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
+            ]
+        )
+
         # Building and storing the complete model.
         self.__model = self.__build()
 
@@ -74,10 +83,6 @@ class DetectionModel(object):
         """ Returns the entire detection model. """
         return self.__model
 
-    @staticmethod
-    def get_data_augmentation_layers():
-        """ Returns a Sequence of data augmentation layers. Random horizontal flip and randomm rotation. """
-
-        return tf.keras.Sequential([tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal"),
-                                    tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
-                                    ])
+    def get_data_augmentation_layers(self):
+        """ Returns the augmentation layers. """
+        return self.__data_augmentation

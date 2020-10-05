@@ -44,7 +44,7 @@ def test_dataset(ds, data_augmentation=None):
     image_batch, label_batch = next(ds_iterator)
 
     if data_augmentation is not None:
-        image_batch = data_augmentation(image_batch)
+        image_batch = data_augmentation(image_batch, training=True)
 
     for i in range(len(image_batch)):
         plt.title("Tomatoes found!" if label_batch[i].numpy() == 1 else "No tomatoes found!")

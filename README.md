@@ -1,96 +1,84 @@
 # Home assignment - Tomato allergies
 
-Open domain image classification
+Open domain image classification.
+In this repository can be found a Deep Learning solution for the tomato detection problem based on a Transfer Learning methodology using a ResNet50V2 as the base model.
 
+## Requirements
 
+Some external libraries have been used to run the program:
+ - TensorFlow 2.3.1
+ - matplotlib
+ - numpy
+ - scikit-learn
 
-## Context
+## Usage
 
-In the context of meal logging, there is a fluctuating asymmetry between task evaluation (user expectation) and data qualification for training (result of labeling), that require specific care. Additionally, in order to have proper class separation, training sometimes requires a superior granularity compared to evaluation's. 
+The program is divided into 3 python files, each of one according to its respective task: [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py), [eval.py](https://github.com/alvarobasi/home-assignment/blob/master/eval.py) and [test.py](https://github.com/alvarobasi/home-assignment/blob/master/test.py).
 
-The research team of Foodvisor is in charge of creating the detection algorithm used for meal logging with the mobile app. Opening access to the app in a new region of the world usually brings about new user expectations.
+Every parameter used in each program can be tuned, either by placing arguments or by changing them directly from the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py) file.
 
+```python
+# Paths
+PLOTS_PATH = "outputs/plots/"
+DATASET_PATH = "datasets/images/"
+LABELS_PATH = "datasets/labels/img_annotations.json"
+CHECKPOINTS_PATH = "outputs/checkpoints/saved_model/saved_model"
+TEST_SET_FILE_PATH = "datasets/test_dataset_array.npy"
+TEST_IMAGE_PATH = "datasets/images/4dda082e4a1d820f7cc32f5cd9dc79be.jpeg"
 
+# Training hyperparameters
+EPOCHS = 5
+BATCH_SIZE = 32
+LEARNING_RATE = 0.001
+FINE_TUNING_LR = 1e-5
+IMAGE_SHAPE = (600, 600, 3)
+FINE_TUNE_LAYERS = 70
+BALANCED_DATASET = True
+MIXED_PRECISION = True
+XLA = False
+```
 
-## Assignment # 1
+## Training
 
-In this assignment, you will create a Deep Learning model to detect whether a meal includes specifics ingredients some users are allergic to. For the sake of simplicity, we will consider a growing amount of user are allergic to tomatoes produced in their countries. We'll try to throw a warning if traces of tomatoes are present in the picture.
+To train the model, the [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py) file should be executed. These are the following arguments that can be introduced:
+ - `-d`: Path to the dataset directory. 
+ - `-a`: Path to the img_annotations.json file.
+ - `-e`: # of epochs to initially train the network for. For the Fine tuning step, it will be 3 times the selected epoch value, as it is the most important part of the training process in this case.
+ - `-bs`: Size of the mini-batch to be used in the training process.
+ - `-lr`: Set learning rate value.
+ - `-ftl`: # of last layers to fine tune in the base model used for the Transfer Learning task.
+ - `-fp16`: Enables mixed_precision training. Only available for Volta, Turing and Ampere GPUs.
+ - `-xla`: Enables XLA compilation mode in order to accelerate training. Linux only.
+ 
+The program will print some information about the metrics states during the training process. As a Transfer Learning technique has been used, the training step will be automatically executed twice, the first one for fiting the new classification layers and the second one for fiting the classification layers along with the selected convolutional layers from the base model. At the end of the process, the model will be evaluated and the error rate obtained in the test set will be printed.
 
-You are provided with a training and test sets that are labeled with bounding boxes, and way more items than you need to identify. Feel free to discard the extra information or use it if it can help you.
+## Evaluating
 
-### Submission
+To evaluate the model,  [eval.py](https://github.com/alvarobasi/home-assignment/blob/master/eval.py) file should be executed. These are the following arguments that can be introduced:
+- `-tds`: Path to the test dataset file. This file is called by default `test_dataset_array.npy` an is generated during the execution of the [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py) file so that this data can be retreived later.
+- `-w`: Path to model weights to be loaded.
 
-Your implementation is expected to be a GitHub (or similar) repository, implemented in Python3. If you are to use a Deep Learning frameworks, feel free to use either PyTorch or Tensorflow. If you plan on using another deep learning framework, or old versions of the mentioned frameworks, please reach out to your interviewer as early as possible.
+Once the model is trained, the test dataset paths and labels are saved in a file called `test_dataset_array.npy`. This file is required to be entered in the evaluation step.
 
-Your repository should include:
+## Testing
 
-- a function has_tomatoes() that takes an image path as an input and outputs True or False depending on your predection
-- instructions to install requirements to run your code
-- clear instructions to train your model on the provided database
-- plots of training and test accuracy
-- your trained model checkpoint in a [release](https://help.github.com/en/github/administering-a-repository/creating-releases)
-- credits to the different repositories or resources that you used for your implementation
+To test the model with a single image,  [test.py](https://github.com/alvarobasi/home-assignment/blob/master/test.py) file should be executed. These are the following arguments that can be introduced:
+- `-i`: Path to the test dataset file. This file is called by default `test_dataset_array.npy` an is generated during the execution of the [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py) file so that this data can be retreived later.
+- `-w`: Path to model weights to be loaded.
 
-It should NOT include:
+It will print the selected image along with its prediction. The function will also return `True` or `False` depending on the result.
 
-- the dataset (just allow the user to provide the path to the extracted dataset and annotations)
+## Results
 
-### Evaluation
+The results obtained using the current parameters and configurations are the following:
 
-- $error\_rate = \frac{\#\ classification\ errors}{\#\ images} \leq 0.05 $
+Before fine tuning layers: 
+![alt text](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/pre_fine_tuning_plot.png)
 
-Not meeting this success condition does not necessarily mean that your application won't be considered further, but we expect you to produce code of your own. <u>Plagiarism will not be considered lightly.</u>
+After fine tuning layers:
+![alt text](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/fine_tuning_plot.png)
 
-### Resources
-
-We encourage you to use freely available resources such as Google Colab (GPUs available to non-paying users have been updated to Tesla P100 in november 2019) if you don't have any available GPU (or prefer not using it).
-
-If you are new to Colab, here is a short [tutorial](https://drive.google.com/open?id=1efNEDlhJaQrF6VH2AWa6rnCYmcSAeX_O) we made for you.
-
-*Please note that many of those topics won't have a specific answer or any given answer and will only be mentioned to better understand your approach*
-
-
-
-## Assignment # 2
-
-In this assignment, you will implement a class activation extraction module to leverage the results of Assignment #1. The goal here is not to train another model for this task or to chase high localization performances, but to generate a class activation map using this [paper](https://arxiv.org/pdf/1512.04150.pdf) similar to the one below:
-
-![tomato_cam](static/images/tomato_cam.jpg)
-
-To evaluate your proposition, you are encouraged to use the bounding boxes of the dataset to check if it does work.
-
-### Submission
-
-Your implementation is expected to be a GitHub (or similar) repository, implemented in Python3. If you are to use a Deep Learning frameworks, feel free to use either PyTorch or Tensorflow. If you plan on using another deep learning framework, or old versions of the mentioned frameworks, please reach out to your interviewer as early as possible.
-
-Your repository should include:
-
-- instructions to install requirements to run your code
-- clear instructions to run and evaluation of your localization module on the test set
-- credits to the different repositories or resources that you used for your implementation
-
-It should NOT include:
-
-- the dataset (just allow the user to provide the path to the extracted dataset and annotations)
-
-### Evaluation
-
-As mentioned, this is an exploratory assignment and there is no success condition. The only constraint is that you have to use the exact same network that you trained for Assignment #1.
-
-Again, we expect you to produce code of your own. <u>Plagiarism will not be considered lightly.</u>
-
-### Resources
-
-cf. Assignment #1
-
-### Data
-
-Please check this [release](https://github.com/Foodvisor/home-assignment/releases/tag/v0.1.0) attachments for the data you can use to test your code:
-
-- label_mapping.csv: the names of each class (available both in English and French)
-- img_annotations.json: the image annotations _(bounding box in format [upper_left_x, upper_left, y, height, width], the associated class id, and whether this class is considered as background)_
-- image folder: the archived image folder that your interviewer sent you
-
-
-
-Best of luck!
+## Credits
+https://keras.io/guides/transfer_learning/
+https://www.tensorflow.org/tutorials/images/transfer_learning
+https://towardsdatascience.com/transfer-learning-from-pre-trained-models-f2393f124751

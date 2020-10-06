@@ -65,18 +65,22 @@ Once the model is trained, the test dataset paths and labels are saved in a file
 To test the model with a single image,  [test.py](https://github.com/alvarobasi/home-assignment/blob/master/test.py) file should be executed. These are the following arguments that can be introduced:
 - `-i`: Path to the test dataset file. This file is called by default `test_dataset_array.npy` an is generated during the execution of the [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py) file so that this data can be retreived later.
 - `-w`: Path to model weights to be loaded.
+- `-cam`: Enable the computation and overlay of the class activation map on the image.
 
-It will print the selected image along with its prediction. The function will also return `True` or `False` depending on the result.
+It will print the selected image along with its prediction. If `-cam` is set to `True`, the CAM will be overlayed on the printed image. The function will also return `True` or `False` depending on the result.
 
 ## Results
 
 The results obtained using the current parameters and configurations are the following:
 
 Before fine tuning layers: 
-![alt text](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/pre_fine_tuning_plot.png)
+![pre_fine_tuning_plot.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/pre_fine_tuning_plot.png)
 
 After fine tuning layers:
-![alt text](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/fine_tuning_plot.png)
+![fine_tuning_plot.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/fine_tuning_plot.png)
+
+When testing an image and `-cam` is enabled, the resulting CAM will be overlayed on the top of the printed image as follows:
+![result_camp.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/result_cam.png)
 
 ## Credits
 https://keras.io/guides/transfer_learning/
@@ -84,3 +88,7 @@ https://keras.io/guides/transfer_learning/
 https://www.tensorflow.org/tutorials/images/transfer_learning
 
 https://towardsdatascience.com/transfer-learning-from-pre-trained-models-f2393f124751
+
+https://towardsdatascience.com/demystifying-convolutional-neural-networks-using-class-activation-maps-fe94eda4cef1
+
+https://arxiv.org/pdf/1512.04150.pdf

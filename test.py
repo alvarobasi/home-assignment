@@ -26,7 +26,7 @@ def has_tomatoes(image, model, compute_cam):
 
         # As in the paper, we select the last layer for predictions and last convolutional layer for feature extraction.
         last_conv_layer_resnet_name = "conv5_block3_out"
-
+        # last_conv_layer_resnet_name = "post_bn"
         classification_layers_names = [
             "global_average_pooling2d",
             "dense",
@@ -41,7 +41,8 @@ def has_tomatoes(image, model, compute_cam):
                                     model.get_layer(base_model_name).get_layer(last_conv_layer_resnet_name).output)
 
         # Computes the features map and predictions for each example. Shape (m, 19, 19, 2048) with m = 1
-        out_convolutions = base_model.predict(np.expand_dims(image, axis=0))
+        out_convolutions = base_model.predict(np.expand_dims(tf.keras.applications.resnet_v2.preprocess_input(image),
+                                                             axis=0))
         prediction = model.predict(np.expand_dims(image, axis=0))
 
         # Sets the shape as (19, 19, 2048), as there is only one example in the test program.

@@ -29,8 +29,8 @@ if __name__ == '__main__':
     # Construct the argument parser and parse the hyperparameters.
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--img_path", type=str, help="Path to the test image.",
-                    default=DATASET_PATH + "4dda082e4a1d820f7cc32f5cd9dc79be.jpeg")
-    ap.add_argument("-w", "--model_weights", default=CHECKPOINTS_PATH + "saved_model/saved_model",
+                    default=TEST_IMAGE_PATH)
+    ap.add_argument("-w", "--model_weights", default=CHECKPOINTS_PATH,
                     help="Path to model checkpoint to be loaded.")
 
     args = vars(ap.parse_args())

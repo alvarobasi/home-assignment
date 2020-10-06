@@ -11,8 +11,8 @@ if __name__ == '__main__':
     # Construct the argument parser and parse the hyperparameters.
     ap = argparse.ArgumentParser()
     ap.add_argument("-tds", "--test_dataset_file", default=TEST_SET_FILE_PATH,
-                    help="Path to the test dataset file.")
-    ap.add_argument("-w", "--model_weights", default=CHECKPOINTS_PATH + "saved_model/saved_model",
+                    help="Path to the .npy test dataset file.")
+    ap.add_argument("-w", "--model_weights", default=CHECKPOINTS_PATH,
                     help="Path to model checkpoint to be loaded.")
     args = vars(ap.parse_args())
 

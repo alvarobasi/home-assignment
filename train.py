@@ -41,9 +41,9 @@ if __name__ == '__main__':
 
     # Construct the argument parser and parse the hyperparameters and paths.
     ap = argparse.ArgumentParser()
-    ap.add_argument("-d", "--dataset_path", required=True,
+    ap.add_argument("-d", "--dataset_path", default=DATASET_PATH,
                     help="Path to the dataset directory.")
-    ap.add_argument("-a", "--annotations_file", required=True,
+    ap.add_argument("-a", "--annotations_path", default=LABELS_PATH,
                     help="Path to the img_annotations.json file.")
     ap.add_argument("-e", "--epochs", type=int, default=EPOCHS,
                     help="# of epochs to initially train the network for. Fine tuning will be 3 times the selected"
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         tf.keras.mixed_precision.experimental.set_policy('mixed_float16')
 
     # Retreive the full dataset paths along with their labels.
-    X, Y, class_weights = get_image_label_pairs(args["annotations_file"], args["dataset_path"],
+    X, Y, class_weights = get_image_label_pairs(args["annotations_path"], args["dataset_path"],
                                                 balanced=BALANCED_DATASET)
 
     train_ds, training_steps, val_ds, _, test_ds = get_dataset_objects(X, Y, args["batch_size"])

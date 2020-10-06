@@ -79,6 +79,8 @@ Before fine tuning layers:
 After fine tuning layers:
 ![fine_tuning_plot.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/fine_tuning_plot.png)
 
+## Assignment 2 Results
+
 When testing an image and `-cam` is enabled, the resulting CAM will be overlayed on the top of the printed image as follows:
 ![result_camp.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/result_cam.png)
 

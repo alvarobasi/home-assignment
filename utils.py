@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from config import *
 from sklearn.utils.class_weight import compute_class_weight
+import scipy.ndimage
 
 
 @tf.function
@@ -64,6 +65,85 @@ def test_dataset(ds, data_augmentation=None):
         plt.title("Tomatoes found!" if label_batch[i].numpy() == 1 else "No tomatoes found!")
         plt.imshow(image_batch.numpy()[i].astype(np.uint8))
         plt.axis('off')
+
+
+def compute_cam(model, image):
+    """
+    Returns the CAM (Class Activation Map) Matrix.
+
+    :param image: Matrix containing the image data.
+    :param model: tf.keras.Model object containing the loaded model.
+
+    :returns: cam_output: Stores the CAM ndarray Matrix.
+    """
+    base_model_name = "resnet50v2"
+
+    # As in the paper, we select the last layer for predictions and last convolutional layer for feature extraction.
+    last_conv_layer_resnet_name = "conv5_block3_out"
+    # last_conv_layer_resnet_name = "post_bn"
+    classification_layers_names = [
+        "global_average_pooling2d",
+        "dense",
+    ]
+
+    # We retreive the weight matrix of the GAP -> Dense layer connection. Shape (m, 2048, 1) with m = 1
+    gap_dense_weight_matrix = model.get_layer(classification_layers_names[1]).get_weights()[0]
+
+    # The base model used for transfer learning is retreived into a new model outputing the features extracted
+    # from the last convolutional layer.
+    base_model = tf.keras.Model(model.get_layer(base_model_name).input,
+                                model.get_layer(base_model_name).get_layer(last_conv_layer_resnet_name).output)
+
+    # Computes the features map and predictions for each example. Shape (m, 19, 19, 2048) with m = 1
+    out_convolutions = base_model.predict(np.expand_dims(tf.keras.applications.resnet_v2.preprocess_input(image),
+                                                         axis=0))
+
+    # Sets the shape as (19, 19, 2048), as there is only one example in the test program.
+    features_cam = np.squeeze(out_convolutions)
+
+    # Sets the weights to a one dimensional array of shape (2048,)
+    cam_weights = np.squeeze(gap_dense_weight_matrix)
+
+    # Upsampling the features from 19x19 to the size of the image 600x600. Result shape: (600, 600, 2048)
+    reshaped_feautes_cam = scipy.ndimage.zoom(features_cam,
+                                              (IMAGE_SHAPE[0] / features_cam.shape[0],
+                                               IMAGE_SHAPE[1] / features_cam.shape[1], 1), order=1)
+
+    # As in the paper, we perform the matricial multiplication of the GAP->Dense weights with the reshaped features.
+    # An "importance" matrix of 600x600 is generated.
+    cam_output = np.dot(reshaped_feautes_cam, cam_weights)
+
+    return cam_output
+
+
+def has_tomatoes(image, model, with_cam):
+    """
+    Returns a boolean stating whether or not there are tomatoes present in the image.
+
+    :param image: Matrix containing the image data.
+    :param model: tf.keras.Model object containing the loaded model.
+    :param compute_cam: Enables the computations and overlay of the Class Activation Maps (CAM) of the prediction.
+
+    :returns: Returns a boolean stating whether or not there are tomatoes present in the image.
+    """
+    prediction = model.predict(np.expand_dims(image, axis=0))
+
+    if with_cam:
+        cam_mat = compute_cam(model, image)
+
+        # The image with the CAM overlayed image are shown.
+        plt.imshow(image.numpy().astype(np.uint8))
+        plt.imshow(cam_mat, cmap='jet', alpha=0.5)
+        plt.axis('off')
+        plt.title("Tomatoes found!" if bool(np.round(np.squeeze(prediction))) else "No tomatoes found!")
+        plt.show()
+    else:
+        plt.imshow(image.numpy().astype(np.uint8))
+        plt.axis('off')
+        plt.title("Tomatoes found!" if bool(np.round(np.squeeze(prediction))) else "No tomatoes found!")
+        plt.show()
+
+    return bool(np.round(np.squeeze(prediction)))
 
 
 def evaluate_model(ds, model, show_images=False):

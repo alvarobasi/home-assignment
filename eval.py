@@ -1,7 +1,6 @@
 import argparse
 import tensorflow as tf
-from utils import get_image_label_pairs, get_dataset_objects, evaluate_model
-from Network import DetectionModel
+from utils import evaluate_model
 from config import *
 import numpy as np
 from utils import map_fn

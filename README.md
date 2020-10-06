@@ -74,17 +74,21 @@ It will print the selected image along with its prediction. If `-cam` is set to 
 The results obtained using the current parameters and configurations are the following:
 
 Before fine tuning layers: 
+
 ![pre_fine_tuning_plot.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/pre_fine_tuning_plot.png)
 
 After fine tuning layers:
+
 ![fine_tuning_plot.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/fine_tuning_plot.png)
 
 ## Assignment 2 Results
 
 When testing an image and `-cam` is enabled, the resulting CAM will be overlayed on the top of the printed image as follows:
+
 ![result_camp.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/result_cam.png)
 
 ## Credits
+
 https://keras.io/guides/transfer_learning/
 
 https://www.tensorflow.org/tutorials/images/transfer_learning

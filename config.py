@@ -8,7 +8,7 @@ DATASET_PATH = "datasets/images/"
 LABELS_PATH = "datasets/labels/img_annotations.json"
 CHECKPOINTS_PATH = "outputs/checkpoints/saved_model/saved_model"
 TEST_SET_FILE_PATH = "datasets/test_dataset_array.npy"
-TEST_IMAGE_PATH = "datasets/images/4dda082e4a1d820f7cc32f5cd9dc79be.jpeg"
+TEST_IMAGE_PATH = "datasets/images/1dc879c960bbf936557a4162bd39df41.jpeg"
 
 # Training hyperparameters
 EPOCHS = 5
@@ -20,6 +20,7 @@ FINE_TUNE_LAYERS = 70
 BALANCED_DATASET = True
 MIXED_PRECISION = True
 XLA = False
+ENABLE_CAM_COMPUTATION = True
 
 
 

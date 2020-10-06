@@ -80,5 +80,7 @@ After fine tuning layers:
 
 ## Credits
 https://keras.io/guides/transfer_learning/
+
 https://www.tensorflow.org/tutorials/images/transfer_learning
+
 https://towardsdatascience.com/transfer-learning-from-pre-trained-models-f2393f124751

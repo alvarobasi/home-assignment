@@ -65,6 +65,10 @@ To evaluate the model,  [eval.py](https://github.com/alvarobasi/home-assignment/
 - `-cam`: Enable the computation and overlay of the class activation map on the evaluation images.
 
 It should be noted that the parameter `ENABLE_SHOW_EVAL_IMAGES = True` located in the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py) file enables the evaluation process to show a plot with 4 test images and their predictions. Furthermore, it is possible to set the argument `-cam True` (or the parameter `ENABLE_CAM_COMPUTATION` within the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py)) so that the CAM matrices for each of the test batch images  are calculated and overlayed over these 4 test images, but if and only if `ENABLE_SHOW_EVAL_IMAGES` and `ENABLE_CAM_COMPUTATION` are enabled. In case `ENABLE_SHOW_EVAL_IMAGES` is disabled, the evaluation process will only output the classification error in the test set. Finally, the paramter `EVAL_BATCH_SIZE = 4` controls the size of the test batch. It is set with such a low number as the CAM calculation is computationally intensive and takes a lot of VRAM memory. At least in my 6GB VRAM graphics card wasn't possible to raise that number.
+
+An example of what the eval returns for each bath when enabled cam calculation and images printing can be seen in the following figure:
+![result_eval.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/result_eval.png)
+
 ## Testing
 
 To test the model with a single image,  [test.py](https://github.com/alvarobasi/home-assignment/blob/master/test.py) file should be executed. These are the following arguments that can be introduced:

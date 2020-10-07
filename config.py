@@ -7,7 +7,7 @@ PLOTS_PATH = "outputs/plots/"
 DATASET_PATH = "datasets/images/"
 LABELS_PATH = "datasets/labels/img_annotations.json"
 CHECKPOINTS_PATH = "outputs/checkpoints/saved_model/saved_model"
-TEST_SET_FILE_PATH = "datasets/test_dataset_array.npy"
+TEST_SET_FILE_PATH = "test_dataset_array.npy"
 TEST_IMAGE_PATH = "datasets/images/149762_2018_04_19_08_31_57_347139.jpg"
 
 # Training hyperparameters

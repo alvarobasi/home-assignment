@@ -24,11 +24,12 @@ DATASET_PATH = "datasets/images/"
 LABELS_PATH = "datasets/labels/img_annotations.json"
 CHECKPOINTS_PATH = "outputs/checkpoints/saved_model/saved_model"
 TEST_SET_FILE_PATH = "datasets/test_dataset_array.npy"
-TEST_IMAGE_PATH = "datasets/images/4dda082e4a1d820f7cc32f5cd9dc79be.jpeg"
+TEST_IMAGE_PATH = "datasets/images/149762_2018_04_19_08_31_57_347139.jpg"
 
 # Training hyperparameters
 EPOCHS = 5
 BATCH_SIZE = 32
+EVAL_BATCH_SIZE = 4
 LEARNING_RATE = 0.001
 FINE_TUNING_LR = 1e-5
 IMAGE_SHAPE = (600, 600, 3)
@@ -36,6 +37,8 @@ FINE_TUNE_LAYERS = 70
 BALANCED_DATASET = True
 MIXED_PRECISION = True
 XLA = False
+ENABLE_CAM_COMPUTATION = True
+ENABLE_SHOW_EVAL_IMAGES = True
 ```
 
 ## Training
@@ -50,16 +53,18 @@ To train the model, the [train.py](https://github.com/alvarobasi/home-assignment
  - `-fp16`: Enables mixed_precision training. Only available for Volta, Turing and Ampere GPUs.
  - `-xla`: Enables XLA compilation mode in order to accelerate training. Linux only.
  
-The program will print some information about the metrics states during the training process. As a Transfer Learning technique has been used, the training step will be automatically executed twice, the first one for fiting the new classification layers and the second one for fiting the classification layers along with the selected convolutional layers from the base model. At the end of the process, the model will be evaluated and the error rate obtained in the test set will be printed.
+The program will print some information about the metrics states during the training process. As a Transfer Learning technique has been used, the training step will be automatically executed twice, the first one for fiting the new classification layers and the second one for fiting the classification layers along with the selected convolutional layers from the base model, which is configured in the paramameter `FINE_TUNE_LAYERS = 70`. At the end of the process, the model will be evaluated without printing the images and the error rate obtained in the test set will be printed. Some hyperparameters used during the process can be found in the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py) file.
+
+Finally, as the dataset is quite unbalanced, the parameter `BALANCED_DATASET = True` balances the dataset by oversampling the positive images (tomato present). In the case this is disabled, a tuple of weights is computed and passed to the training process so that the minority class will gain more relevance against the mayority class.
 
 ## Evaluating
 
 To evaluate the model,  [eval.py](https://github.com/alvarobasi/home-assignment/blob/master/eval.py) file should be executed. These are the following arguments that can be introduced:
 - `-tds`: Path to the test dataset file. This file is called by default `test_dataset_array.npy` an is generated during the execution of the [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py) file so that this data can be retreived later.
 - `-w`: Path to model weights to be loaded.
+- `-cam`: Enable the computation and overlay of the class activation map on the evaluation images.
 
-Once the model is trained, the test dataset paths and labels are saved in a file called `test_dataset_array.npy`. This file is required to be entered in the evaluation step.
-
+It should be noted that the parameter `ENABLE_SHOW_EVAL_IMAGES = True` located in the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py) file enables the evaluation process to show a plot with 4 test images and their predictions. Furthermore, it is possible to set the argument `-cam True` (or the parameter `ENABLE_CAM_COMPUTATION` within the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py)) so that the CAM matrices for each of the test batch images  are calculated and overlayed over these 4 test images, but if and only if `ENABLE_SHOW_EVAL_IMAGES` and `ENABLE_CAM_COMPUTATION` are enabled. In case `ENABLE_SHOW_EVAL_IMAGES` is disabled, the evaluation process will only output the classification error in the test set. Finally, the paramter `EVAL_BATCH_SIZE = 4` controls the size of the test batch. It is set with such a low number as the CAM calculation is computationally intensive and takes a lot of VRAM memory. At least in my 6GB VRAM graphics card wasn't possible to raise that number.
 ## Testing
 
 To test the model with a single image,  [test.py](https://github.com/alvarobasi/home-assignment/blob/master/test.py) file should be executed. These are the following arguments that can be introduced:

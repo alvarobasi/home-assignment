@@ -67,11 +67,65 @@ def test_dataset(ds, data_augmentation=None):
         plt.axis('off')
 
 
-def compute_cam(model, image):
+def compute_multiple_cam(model, image_batch):
+    """
+    Returns a list of CAM (Class Activation Map) matrices for each image in the batch.
+
+    :param image_batch: Tensor containing all the batch of images.
+    :param model: tf.keras.Model object containing the loaded model.
+
+    :returns: cam_map_list: Stores a list of CAM ndarray matrices.
+    """
+    base_model_name = "resnet50v2"
+
+    # As in the paper, we select the last layer for predictions and last convolutional layer for feature extraction.
+    last_conv_layer_resnet_name = "conv5_block3_out"
+    # last_conv_layer_resnet_name = "post_bn"
+    classification_layers_names = [
+        "global_average_pooling2d",
+        "dense",
+    ]
+
+    # We retreive the weight matrix of the GAP -> Dense layer connection. Shape (2048, 1)
+    gap_dense_weight_matrix = model.get_layer(classification_layers_names[1]).get_weights()[0]
+
+    # The base model used for transfer learning is retreived into a new model outputing the features extracted
+    # from the last convolutional layer.
+    base_model = tf.keras.Model(model.get_layer(base_model_name).input,
+                                model.get_layer(base_model_name).get_layer(last_conv_layer_resnet_name).output)
+
+    # Computes the features map and predictions for each example. Shape (m, 19, 19, 2048) with m = 1
+    out_convolutions = base_model.predict(tf.keras.applications.resnet_v2.preprocess_input(image_batch))
+
+    cam_map_list = []
+
+    for i in range(len(image_batch.numpy())):
+
+        # Sets the shape as (19, 19, 2048), as there is only one example in the test program.
+        features_cam = out_convolutions[i, :, :, :]
+
+        # Sets the weights to a one dimensional array of shape (2048,)
+        cam_weights = np.squeeze(gap_dense_weight_matrix)
+
+        # Upsampling the features from 19x19 to the size of the image 600x600. Result shape: (600, 600, 2048)
+        reshaped_feautes_cam = scipy.ndimage.zoom(features_cam,
+                                                  (IMAGE_SHAPE[0] / features_cam.shape[0],
+                                                   IMAGE_SHAPE[1] / features_cam.shape[1], 1), order=1)
+
+        # As in the paper, we perform the matricial multiplication of the GAP->Dense weights with the reshaped features.
+        # An "importance" matrix of 600x600 is generated.
+        cam_output = np.dot(reshaped_feautes_cam, cam_weights)
+
+        cam_map_list.append(cam_output)
+
+    return cam_map_list
+
+
+def compute_single_cam(model, image):
     """
     Returns the CAM (Class Activation Map) Matrix.
 
-    :param image: Matrix containing the image data.
+    :param image: Matrix containing a single image data.
     :param model: tf.keras.Model object containing the loaded model.
 
     :returns: cam_output: Stores the CAM ndarray Matrix.
@@ -120,16 +174,16 @@ def has_tomatoes(image, model, with_cam):
     """
     Returns a boolean stating whether or not there are tomatoes present in the image.
 
+    :param with_cam: Enables the computations and overlay of the Class Activation Maps (CAM) of the prediction.
     :param image: Matrix containing the image data.
     :param model: tf.keras.Model object containing the loaded model.
-    :param compute_cam: Enables the computations and overlay of the Class Activation Maps (CAM) of the prediction.
 
     :returns: Returns a boolean stating whether or not there are tomatoes present in the image.
     """
     prediction = model.predict(np.expand_dims(image, axis=0))
 
     if with_cam:
-        cam_mat = compute_cam(model, image)
+        cam_mat = compute_single_cam(model, image)
 
         # The image with the CAM overlayed image are shown.
         plt.imshow(image.numpy().astype(np.uint8))
@@ -146,13 +200,15 @@ def has_tomatoes(image, model, with_cam):
     return bool(np.round(np.squeeze(prediction)))
 
 
-def evaluate_model(ds, model, show_images=False):
+def evaluate_model(ds, model, with_cam, show_images=False):
     """
     Evaluates the given model using the given dataset and prints the classification error (# errors/total_images).
 
     :param ds: tf.Dataset object used for testing the model.
     :param model: tf.keras.Model object with the model to be tested.
-    :param show_images: Enables the posibility to print the images being tested. For debugging purposes.
+    :param with_cam: Enables the computations and overlay of the Class Activation Maps (CAM) of the prediction.
+    :param show_images: Enables the posibility to print the images being tested. For debugging purposes or just to see
+    the results in multiple images at the same time.
     """
     ds_iterator = iter(ds)
     image_batch, label_batch = next(ds_iterator)
@@ -160,6 +216,10 @@ def evaluate_model(ds, model, show_images=False):
     image_counter = 0
 
     while True:
+
+        if with_cam and show_images:
+            cam_outputs = compute_multiple_cam(model, image_batch)
+
         # Predicts the labels of the dataset batch.
         predictions = model.predict(image_batch)
         image_counter += len(image_batch.numpy())
@@ -174,8 +234,10 @@ def evaluate_model(ds, model, show_images=False):
         if show_images:
 
             for i in range(len(image_batch.numpy())):
-                plt.subplot(4, 4, i + 1)
+                plt.subplot(2, 2, i + 1)
                 plt.imshow(image_batch.numpy()[i].astype(np.uint8))
+                if with_cam:
+                    plt.imshow(cam_outputs[i], cmap='jet', alpha=0.5)
                 plt.axis('off')
                 plt.title("Label: " + str(label_batch.numpy()[i]) + " Predicted: " +
                           str(np.round(np.squeeze(predictions[i]))))
@@ -192,14 +254,15 @@ def evaluate_model(ds, model, show_images=False):
         except StopIteration:
             print("Error rate on " + str(image_counter) + " images tested: "
                   + str(error_counter / image_counter))
-            break
+            exit(0)
 
 
-def get_dataset_objects(x, y, batch_size, valid_split=0.2, test_split=0.05):
+def get_dataset_objects(x, y, bound_boxes, batch_size, valid_split=0.2, test_split=0.05):
     """
     Slipts dataset intro train, validation and set, shuffles the data and returns the tf.Dataset objects corresponding
     to each of the dataset splits.
 
+    :param bound_boxes: List of bounding boxes.
     :param x: Numpy array containing the images' paths.
     :param y: Numpy array containing the labels.
     :param batch_size: Mini-batch size used during training, validation and testing.
@@ -212,10 +275,13 @@ def get_dataset_objects(x, y, batch_size, valid_split=0.2, test_split=0.05):
     :return validation_steps: Integer containing the validation steps for each epoch.
     :return test_ds: tf.Dataset object of the testing set.
     """
-    x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=valid_split, random_state=1805)
-    x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=test_split, random_state=1805)
+    x_train, x_val, y_train, y_val, b_train, b_eval = train_test_split(x, y, bound_boxes, test_size=valid_split,
+                                                                       random_state=1805)
+    x_train, x_test, y_train, y_test, b_train, b_test = train_test_split(x_train, y_train, b_train,
+                                                                         test_size=test_split,
+                                                                         random_state=1805)
 
-    z_test = np.column_stack((x_test, y_test))
+    z_test = np.column_stack((x_test, y_test, b_test))
 
     # Let's save the test set for future evaluation.
     np.save(TEST_SET_FILE_PATH, z_test)
@@ -309,6 +375,9 @@ def get_image_label_pairs(annotations_path, image_dir_path, balanced=True):
     x_positives = []
     y_positives = []
 
+    positive_boxes_list = list()
+    negative_boxes_list = list()
+
     class_weights = None
 
     # Compares all the boxes labels from every image with the tomato_label_list and stores a new label 0 or 1, depending
@@ -320,30 +389,34 @@ def get_image_label_pairs(annotations_path, image_dir_path, balanced=True):
                 found_tomatoes = 1.
                 x_positives.append(image_dir_path + image_path)
                 y_positives.append(found_tomatoes)
+                positive_boxes_list.append(box["box"])
                 break
         if found_tomatoes == 0:
             x_negatives.append(image_dir_path + image_path)
             y_negatives.append(found_tomatoes)
+            negative_boxes_list.append([])
 
     # Oversampling is applied over the positive set in order to balance the datasets.
     # 2500(other)/500(tomato) = 5 >> 1.5
     if balanced:
 
         ratio = len(x_positives + x_negatives) // len(x_positives)
-        z = (x_positives, y_positives)
+        # z = (x_positives, y_positives, positive_boxes_list)
 
-        z = z * (ratio - 1)
+        # z = z * (ratio - 1)
 
         x_positives = x_positives * (ratio - 1)
         y_positives = y_positives * (ratio - 1)
+        positive_boxes_list = positive_boxes_list * (ratio - 1)
 
         x = x_negatives + x_positives
         y = y_negatives + y_positives
+        boxes = negative_boxes_list + positive_boxes_list
 
     else:
-        x = x_positives + x_negatives
-        y = y_positives + y_negatives
-
+        x = x_negatives + x_positives
+        y = y_negatives + y_positives
+        boxes = negative_boxes_list + positive_boxes_list
         class_weights = compute_class_weight('balanced', np.unique(y), y)
 
-    return np.array(x), np.array(y), class_weights
+    return np.array(x), np.array(y), boxes, class_weights

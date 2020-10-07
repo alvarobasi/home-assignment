@@ -71,10 +71,10 @@ if __name__ == '__main__':
         tf.keras.mixed_precision.experimental.set_policy('mixed_float16')
 
     # Retreive the full dataset paths along with their labels.
-    X, Y, class_weights = get_image_label_pairs(args["annotations_path"], args["dataset_path"],
-                                                balanced=BALANCED_DATASET)
+    X, Y, boxes, class_weights = get_image_label_pairs(args["annotations_path"], args["dataset_path"],
+                                                       balanced=BALANCED_DATASET)
 
-    train_ds, training_steps, val_ds, _, test_ds = get_dataset_objects(X, Y, args["batch_size"])
+    train_ds, training_steps, val_ds, _, test_ds = get_dataset_objects(X, Y, boxes, args["batch_size"])
 
     # Model creation using transfer learning from a pre-trained ResNet50V2.
     model_object = DetectionModel(input_shape=IMAGE_SHAPE)

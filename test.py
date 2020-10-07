@@ -6,6 +6,8 @@ import tensorflow as tf
 
 
 if __name__ == '__main__':
+    # Required lines of code. Otherwise, the layer computations performed in the compute_cam function will raise a
+    # cuDNN error.
     physical_devices = tf.config.experimental.list_physical_devices('GPU')
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 

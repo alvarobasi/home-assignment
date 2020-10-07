@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     plot_training_results(history, PLOTS_PATH + "pre_fine_tuning_plot.png")
 
-    evaluate_model(test_ds, model, show_images=False)
+    evaluate_model(test_ds, model, with_cam=False, show_images=False)
 
     # Fine-tune the last upper layers.
     layers_to_fine_tune = args["fine_tune_layers"]
@@ -119,4 +119,4 @@ if __name__ == '__main__':
 
     plot_training_results(history, PLOTS_PATH + "fine_tuning_plot.png")
 
-    evaluate_model(test_ds, model, show_images=False)
+    evaluate_model(test_ds, model, with_cam=False, show_images=False)

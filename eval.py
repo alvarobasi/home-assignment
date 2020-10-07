@@ -18,6 +18,8 @@ if __name__ == '__main__':
                     help="Path to the .npy test dataset file.")
     ap.add_argument("-w", "--model_weights", default=CHECKPOINTS_PATH,
                     help="Path to model checkpoint to be loaded.")
+    ap.add_argument("-cam", "--compute_cam", type=bool, default=ENABLE_CAM_COMPUTATION,
+                    help="Compute and overlay the class activation map on the image.")
     args = vars(ap.parse_args())
 
     model = DetectionModel(IMAGE_SHAPE).get_model()
@@ -35,4 +37,4 @@ if __name__ == '__main__':
     test_ds = test_ds.batch(EVAL_BATCH_SIZE)
     test_ds = test_ds.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
-    evaluate_model(test_ds, model, ENABLE_CAM_COMPUTATION, show_images=ENABLE_SHOW_EVAL_IMAGES)
+    evaluate_model(test_ds, model, args["compute_cam"], show_images=ENABLE_SHOW_EVAL_IMAGES)

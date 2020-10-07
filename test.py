@@ -32,5 +32,5 @@ if __name__ == '__main__':
     image = decode_image(args["img_path"])
 
     # Check wether there are tomatoes present in the image.
-    found = has_tomatoes(image, model, ENABLE_CAM_COMPUTATION)
+    found = has_tomatoes(image, model, args["compute_cam"])
     print(found)

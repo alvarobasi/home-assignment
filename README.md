@@ -10,6 +10,7 @@ Some external libraries have been used to run the program:
  - matplotlib
  - numpy
  - scikit-learn
+ - scipy
 
 ## Usage
 

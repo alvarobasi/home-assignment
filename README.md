@@ -56,6 +56,8 @@ To train the model, the [train.py](https://github.com/alvarobasi/home-assignment
  
 The program will print some information about the metrics states during the training process. As a Transfer Learning technique has been used, the training step will be automatically executed twice, the first one for fiting the new classification layers and the second one for fiting the classification layers along with the selected convolutional layers from the base model, which is configured in the paramameter `FINE_TUNE_LAYERS = 70`. At the end of the process, the model will be evaluated without printing the images and the error rate obtained in the test set will be printed. Some hyperparameters used during the process can be found in the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py) file.
 
+Finally, as the dataset is quite unbalanced, the parameter `BALANCED_DATASET = True` balances the dataset by oversampling the positive images (tomato present). In the case this is disabled, a tuple of weights is computed and passed to the training process so that the minority class will gain more relevance against the mayority class.
+
 ## Evaluating
 
 To evaluate the model,  [eval.py](https://github.com/alvarobasi/home-assignment/blob/master/eval.py) file should be executed. These are the following arguments that can be introduced:

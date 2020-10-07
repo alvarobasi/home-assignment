@@ -7,6 +7,8 @@ In this repository can be found a Deep Learning solution for the tomato detectio
 
 Some external libraries have been used to run the program:
  - TensorFlow 2.3.1
+ - CUDA 10.1
+ - cuDNN 7.6.5
  - matplotlib
  - numpy
  - scikit-learn

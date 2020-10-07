@@ -19,7 +19,6 @@ Every parameter used in each program can be tuned, either by placing arguments o
 
 ```python
 # Paths
-# Paths
 PLOTS_PATH = "outputs/plots/"
 DATASET_PATH = "datasets/images/"
 LABELS_PATH = "datasets/labels/img_annotations.json"

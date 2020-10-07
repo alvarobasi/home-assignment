@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     # Checkpoint
     best_checkpoint = ModelCheckpoint(
-        filepath=CHECKPOINTS_PATH + "saved_model",
+        filepath=CHECKPOINTS_PATH,
         monitor='accuracy',
         save_weights_only=True,
         save_best_only=True,

@@ -63,7 +63,7 @@ Finally, as the dataset is quite unbalanced, the parameter `BALANCED_DATASET = T
 ## Evaluating
 
 To evaluate the model,  [eval.py](https://github.com/alvarobasi/home-assignment/blob/master/eval.py) file should be executed. These are the following arguments that can be introduced:
-- `-tds`: Path to the test dataset file. This file is called by default `test_dataset_array.npy` an is generated during the execution of the [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py) file so that this data can be retreived later.
+- `-tds`: Path to the test dataset file. This file is called by default `test_dataset_array.npy` an is generated during the execution of the [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py) file so that the same test data can be retreived later.
 - `-w`: Path to model weights to be loaded.
 - `-cam`: Enable the computation and overlay of the class activation map on the evaluation images.
 

@@ -13,6 +13,7 @@ Some external libraries have been used to run the program:
  - numpy
  - scikit-learn
  - scipy
+ - OpenCV 4.4.0.44
 
 ## Usage
 

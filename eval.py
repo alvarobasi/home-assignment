@@ -1,9 +1,8 @@
 import argparse
 import tensorflow as tf
-from utils import evaluate_model
+from utils import evaluate_model, map_fn, evaluate_model_box_predictions
 from config import *
 import numpy as np
-from utils import map_fn
 from Network import DetectionModel
 
 if __name__ == '__main__':
@@ -19,7 +18,12 @@ if __name__ == '__main__':
     ap.add_argument("-w", "--model_weights", default=CHECKPOINTS_PATH,
                     help="Path to model checkpoint to be loaded.")
     ap.add_argument("-cam", "--compute_cam", type=bool, default=ENABLE_CAM_COMPUTATION,
-                    help="Compute and overlay the class activation map on the image.")
+                    help="Compute and overlay the class activation map on the image. Applies only to the "
+                         "eval_classification mode")
+    ap.add_argument("-clas", "--eval_classification", type=bool, default=ENABLE_CLASSIFICATION_EVAL,
+                    help="Selects the evaluation of the classification performance of the model.")
+    ap.add_argument("-loc", "--eval_localization", type=bool, default=ENABLE_LOCALIZATION_EVAL,
+                    help="Selects the evaluation of the object localization performance of the model.")
     args = vars(ap.parse_args())
 
     model = DetectionModel(IMAGE_SHAPE).get_model()
@@ -29,7 +33,6 @@ if __name__ == '__main__':
 
     x_test = z_test[:, 0]
     y_test = z_test[:, 1].astype(np.float32)
-    b_test = z_test[:, 2]
 
     # Creating the tf.Dataset for the testing dataset.
     test_ds = tf.data.Dataset.from_tensor_slices((x_test, y_test))
@@ -37,4 +40,8 @@ if __name__ == '__main__':
     test_ds = test_ds.batch(EVAL_BATCH_SIZE)
     test_ds = test_ds.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
-    evaluate_model(test_ds, model, args["compute_cam"], show_images=ENABLE_SHOW_EVAL_IMAGES)
+    if args["eval_localization"]:
+        evaluate_model_box_predictions(z_test, model)
+
+    if args["eval_classification"]:
+        evaluate_model(test_ds, model, args["compute_cam"], show_images=ENABLE_SHOW_EVAL_IMAGES)

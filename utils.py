@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from config import *
 from sklearn.utils.class_weight import compute_class_weight
 import scipy.ndimage
+import cv2 as cv
 
 
 @tf.function
@@ -100,7 +101,6 @@ def compute_multiple_cam(model, image_batch):
     cam_map_list = []
 
     for i in range(len(image_batch.numpy())):
-
         # Sets the shape as (19, 19, 2048), as there is only one example in the test program.
         features_cam = out_convolutions[i, :, :, :]
 
@@ -203,7 +203,6 @@ def has_tomatoes(image, model, with_cam):
 def evaluate_model(ds, model, with_cam, show_images=False):
     """
     Evaluates the given model using the given dataset and prints the classification error (# errors/total_images).
-
     :param ds: tf.Dataset object used for testing the model.
     :param model: tf.keras.Model object with the model to be tested.
     :param with_cam: Enables the computations and overlay of the Class Activation Maps (CAM) of the prediction.
@@ -255,6 +254,63 @@ def evaluate_model(ds, model, with_cam, show_images=False):
             print("Error rate on " + str(image_counter) + " images tested: "
                   + str(error_counter / image_counter))
             exit(0)
+
+
+def evaluate_model_box_predictions(ds, model):
+    """
+    Evaluates the performance of the model in localizing tomatoes in the image by comparing
+    the predicted box with the ground truth.
+
+    :param ds: tuple containing the paths, labels and boxes of each test image.
+    :param model: tf.keras.Model object with the model to be tested.
+    """
+    x_test = ds[:, 0]
+    y_test = ds[:, 1].astype(np.float32)
+    b_test = ds[:, 2]
+
+    for i in range(len(x_test)):
+        print("Loading new image...")
+        image = decode_image(x_test[i])
+        prediction = model.predict(np.expand_dims(image, axis=0))
+
+        if len(b_test[i]) > 0:
+            cam_mat = compute_single_cam(model, image)
+            _, thresholded_cam = cv.threshold(cam_mat, 22, np.max(cam_mat), cv.THRESH_BINARY)
+            norm_thresholded_cam = (thresholded_cam / np.max(cam_mat)) * 255
+            blobs, _ = cv.findContours(norm_thresholded_cam.astype(np.uint8), cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+
+            # Find the index of the largest blob
+            # if len(b_test[i]) > 1:
+            image = image.numpy().astype(np.uint8)
+            for blob in blobs:
+                pos_x, pos_y, rect_w, rect_h = cv.boundingRect(blob)
+
+                # Prints the deteceted rectangle.
+                image = cv.rectangle(image, (pos_x, pos_y),
+                                     (pos_x + rect_w, pos_y + rect_h), (0, 0, 255), 2)
+                image = cv.putText(image, 'Tomato ' + str(np.around(np.squeeze(prediction), 2) * 100) + "%",
+                                   (pos_x + 10, pos_y - 10), 0, 0.8, (0, 0, 255))
+
+            for rect in b_test[i]:
+                # Prints the ground truth rectangle.
+                image = cv.rectangle(image,
+                                     (rect[0], rect[1]),
+                                     (rect[0] + rect[2],
+                                      rect[1] + rect[3]), (0, 255, 0), 2)
+                image = cv.putText(image, 'Ground truth',
+                                   (rect[0] + 10, rect[1] - 10), 0, 0.8, (0, 255, 0))
+
+            plt.imshow(image)
+            # plt.imshow(cam_mat, cmap='jet', alpha=0.5)
+            plt.axis('off')
+            plt.title("Tomatoes found!" if bool(np.round(np.squeeze(prediction))) else "No tomatoes found!")
+            plt.show()
+
+        else:
+            plt.imshow(image.numpy().astype(np.uint8))
+            plt.axis('off')
+            plt.title("Tomatoes found!" if bool(np.round(np.squeeze(prediction))) else "No tomatoes found!")
+            plt.show()
 
 
 def get_dataset_objects(x, y, bound_boxes, batch_size, valid_split=0.2, test_split=0.05):
@@ -382,28 +438,28 @@ def get_image_label_pairs(annotations_path, image_dir_path, balanced=True):
 
     # Compares all the boxes labels from every image with the tomato_label_list and stores a new label 0 or 1, depending
     # on whether there is a tomato label present or not.
+    i = 0
     for image_path, boxes in labels_dic.items():
         found_tomatoes = 0.
         for box in boxes:
             if box["id"] in tomato_label_list:
-                found_tomatoes = 1.
-                x_positives.append(image_dir_path + image_path)
-                y_positives.append(found_tomatoes)
-                positive_boxes_list.append(box["box"])
-                break
+                if len(y_positives + y_negatives) != i + 1:
+                    found_tomatoes = 1.
+                    x_positives.append(image_dir_path + image_path)
+                    y_positives.append(found_tomatoes)
+                    positive_boxes_list.append([])
+                positive_boxes_list[i - len(y_negatives)].append(box["box"])
         if found_tomatoes == 0:
             x_negatives.append(image_dir_path + image_path)
             y_negatives.append(found_tomatoes)
             negative_boxes_list.append([])
+        i += 1
 
     # Oversampling is applied over the positive set in order to balance the datasets.
     # 2500(other)/500(tomato) = 5 >> 1.5
     if balanced:
 
         ratio = len(x_positives + x_negatives) // len(x_positives)
-        # z = (x_positives, y_positives, positive_boxes_list)
-
-        # z = z * (ratio - 1)
 
         x_positives = x_positives * (ratio - 1)
         y_positives = y_positives * (ratio - 1)

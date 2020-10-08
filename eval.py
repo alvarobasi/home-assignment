@@ -20,9 +20,9 @@ if __name__ == '__main__':
     ap.add_argument("-cam", "--compute_cam", type=bool, default=ENABLE_CAM_COMPUTATION,
                     help="Compute and overlay the class activation map on the image. Applies only to the "
                          "eval_classification mode")
-    ap.add_argument("-clas", "--eval_classification", type=bool, default=ENABLE_CLASSIFICATION_EVAL,
+    ap.add_argument("-clas_evl", "--eval_classification", type=bool, default=ENABLE_CLASSIFICATION_EVAL,
                     help="Selects the evaluation of the classification performance of the model.")
-    ap.add_argument("-loc", "--eval_localization", type=bool, default=ENABLE_LOCALIZATION_EVAL,
+    ap.add_argument("-loc_evl", "--eval_localization", type=bool, default=ENABLE_LOCALIZATION_EVAL,
                     help="Selects the evaluation of the object localization performance of the model.")
     args = vars(ap.parse_args())
 

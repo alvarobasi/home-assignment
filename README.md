@@ -66,11 +66,21 @@ To evaluate the model,  [eval.py](https://github.com/alvarobasi/home-assignment/
 - `-tds`: Path to the test dataset file. This file is called by default `test_dataset_array.npy` an is generated during the execution of the [train.py](https://github.com/alvarobasi/home-assignment/blob/master/train.py) file so that the same test data can be retreived later.
 - `-w`: Path to model weights to be loaded.
 - `-cam`: Enable the computation and overlay of the class activation map on the evaluation images.
+- `-clas_evl`: Selects the evaluation of the classification performance of the model.
+- `-loc_evl`: Selects the evaluation of the object localization performance of the model.
 
-It should be noted that the parameter `ENABLE_SHOW_EVAL_IMAGES = True` located in the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py) file enables the evaluation process to show a plot with 4 test images and their predictions. Furthermore, it is possible to set the argument `-cam True` (or the parameter `ENABLE_CAM_COMPUTATION` within the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py)) so that the CAM matrices for each of the test batch images  are calculated and overlayed over these 4 test images, but if and only if `ENABLE_SHOW_EVAL_IMAGES` and `ENABLE_CAM_COMPUTATION` are enabled. In case `ENABLE_SHOW_EVAL_IMAGES` is disabled, the evaluation process will only output the classification error rate in the test set. Finally, the paramter `EVAL_BATCH_SIZE = 4` controls the size of the test batch. It is set with such a low number as the CAM upsampling is computationally intensive and two big models (the base model and the entire model) are used separatelly in order to perform the CAM computation, which take a lot of VRAM memory. At least in my 6GB VRAM graphics card wasn't possible to raise that number.
+Regarding the evaluation of the classification performance, it should be noted that the parameter `ENABLE_SHOW_EVAL_IMAGES = True` located in the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py) file enables the evaluation process to show a plot with 4 test images and their predictions for each batch `EVAL_BATCH_SIZE = 4`. Furthermore, it is possible to set the argument `-cam True` (or the parameter `ENABLE_CAM_COMPUTATION` within the [config.py](https://github.com/alvarobasi/home-assignment/blob/master/config.py)) so that the CAM matrices for each of the test batch images are calculated and overlayed over these 4 test images. This is only possible if and only if `ENABLE_SHOW_EVAL_IMAGES` and `ENABLE_CAM_COMPUTATION` are enabled together. In case `ENABLE_SHOW_EVAL_IMAGES` is disabled, the evaluation process will only output the classification error rate in the test set, even if `ENABLE_CAM_COMPUTATION` is enabled. Finally, the paramter `EVAL_BATCH_SIZE = 4` controls the size of the test batch, that is, the number of images that will be processed at the same time. It is set with such a low number as the CAM upsampling is computationally intensive and two big models (the base model and the entire model) are used separatelly in order to perform the CAM computation, which take a lot of VRAM memory. At least in my 6GB VRAM graphics card wasn't possible to raise that number.
 
-An example of what the eval returns for each batch when enabled cam calculation and images printing can be seen in the following figure:
+An example of what the classification evaluation returns for each batch when enabled CAM calculation and images printing can be seen in the following figure:
+
 ![result_eval.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/result_eval.png)
+
+On the other hand, the evaluation of the localization performance will draw in green on the main image the ground truth bounding boxes, which are stored inside the `test_dataset_array.npy` file along with the corresponding image path and label. Furthermore, the bounding boxes predicted by the model will also be drawn in blue so that they can be visually compared with the groung truths in order to evaluate the performance.
+
+An example of what the evaluation of the localization performance will output each iteration is shown in the following figure:
+
+![results_boxes.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/results_boxes.png)
+
 
 ## Testing
 
@@ -80,6 +90,10 @@ To test the model with a single image,  [test.py](https://github.com/alvarobasi/
 - `-cam`: Enable the computation and overlay of the class activation map on the image.
 
 It will print the selected image along with its prediction. If `-cam` is set to `True`, the CAM will be overlayed on the printed image. The function will also return `True` or `False` depending on the result.
+
+When testing an image and `-cam` is enabled, the resulting CAM will be overlayed on the top of the printed image as follows:
+
+![result_camp.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/result_cam.png)
 
 ## Results
 
@@ -94,10 +108,8 @@ After fine tuning layers:
 ![fine_tuning_plot.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/plots/fine_tuning_plot.png)
 
 ## Assignment 2 Results
+The results of this section are shown in the [Evaluating](https://github.com/alvarobasi/home-assignment/blob/master/README.md#evaluating) and  [Testing](https://github.com/alvarobasi/home-assignment/blob/master/README.md#testing).
 
-When testing an image and `-cam` is enabled, the resulting CAM will be overlayed on the top of the printed image as follows:
-
-![result_camp.png](https://github.com/alvarobasi/home-assignment/blob/master/outputs/result_cam.png)
 
 ## Credits
 
